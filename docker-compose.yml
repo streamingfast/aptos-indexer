@@ -1,0 +1,35 @@
+version: "3"
+services:
+  postgres:
+    container_name: postgres-aptos-indexer
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    command: ["postgres", "-cshared_preload_libraries=pg_stat_statements"]
+    #command: ["postgres", "-cshared_preload_libraries=pg_stat_statements", "-clog_statement=all"]
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secure
+      POSTGRES_DB: indexer-dev
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "5432"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+  pgweb:
+    container_name: pgweb-aptos-indexer
+    image: sosedoff/pgweb:0.11.10
+    restart: on-failure
+    ports:
+      - "8081:8081"
+    command: ["pgweb", "--bind=0.0.0.0", "--listen=8081", "--binary-codec=hex"]
+    #command: ["pgweb", "--binary-codec=base58"]
+    #command: ["pgweb", "--binary-codec=base64"]
+    links:
+      - postgres:postgres
+    environment:
+      - DATABASE_URL=postgres://admin:secure@postgres:5432/indexer-dev?sslmode=disable
+    depends_on:
+      - postgres
